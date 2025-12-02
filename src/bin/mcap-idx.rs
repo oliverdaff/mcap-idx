@@ -1,10 +1,12 @@
+use std::io::Cursor;
+
 use anyhow::Result;
 use clap::Parser;
 use tokio::fs::File;
 use tokio::io::BufReader;
 
-use mcap_idx::header::parse_header;
-use mcap_idx::stream::McapStream;
+use binrw::BinRead;
+use tokio::io::AsyncReadExt;
 
 /// Simple streaming MCAP parser / indexer.
 #[derive(Parser, Debug)]
@@ -21,27 +23,15 @@ async fn main() -> Result<()> {
     let file = File::open(&args.path).await?;
     let mut reader = BufReader::new(file);
 
-    // Read magic
-    mcap_idx::magic::read_magic(&mut reader).await?;
+    // MCAP magic is always 8 bytes.
+    let mut magic = [0u8; 8];
+    reader.read_exact(&mut magic).await?;
 
-    // Set up parser
-    let mut stream = McapStream::new(reader);
+    let mut cursor = Cursor::new(magic);
 
-    // Read header record
-    let header_rec = stream.next().await?.expect("missing header record");
-    let header = parse_header(stream.reader_mut(), header_rec.body_len).await?;
-    println!("Header: {:?}", header);
-
-    // Walk records
-    while let Some(rec) = stream.next().await? {
-        println!(
-            "Record at offset {}: {:?} (body_len = {})",
-            rec.offset, rec.opcode, rec.body_len
-        );
-        stream.skip_body(&rec).await?;
-    }
+    // Validate the magic bytes.
+    mcap_idx::magic::Magic::read(&mut cursor)?;
 
     println!("Done.");
     Ok(())
 }
-
