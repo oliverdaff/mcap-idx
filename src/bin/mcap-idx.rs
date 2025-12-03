@@ -30,7 +30,9 @@ async fn main() -> Result<()> {
     let mut cursor = Cursor::new(magic);
 
     // Validate the magic bytes.
-    mcap_idx::magic::Magic::read(&mut cursor)?;
+    let magic = mcap_idx::magic::Magic::read(&mut cursor)?;
+
+    println!("magic : {magic:?}");
 
     println!("Done.");
     Ok(())
