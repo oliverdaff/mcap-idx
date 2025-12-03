@@ -2,6 +2,7 @@ use std::io::Cursor;
 
 use anyhow::Result;
 use clap::Parser;
+use mcap_idx::header::HeaderRecord;
 use tokio::fs::File;
 use tokio::io::BufReader;
 
@@ -33,6 +34,8 @@ async fn main() -> Result<()> {
     let magic = mcap_idx::magic::Magic::read(&mut cursor)?;
 
     println!("magic : {magic:?}");
+
+    let header: HeaderRecord = HeaderRecord::read_le(&mut reader)?;
 
     println!("Done.");
     Ok(())
